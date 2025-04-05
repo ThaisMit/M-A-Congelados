@@ -1,0 +1,96 @@
+@import 'https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300';
+
+body {
+  display: flex;
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center; /* Centraliza verticalmente */
+  background-image: url('images/fundo.jpg'); /* Caminho da imagem */
+  background-size: cover; /* Faz a imagem cobrir toda a tela */
+  background-position: center; /* Centraliza a imagem */
+  background-repeat: no-repeat; /* Evita repetição da imagem */
+  height: 100vh; /* Faz o body ocupar 100% da altura da tela */
+  margin: 0; /* Remove margens padrão do body */
+  font-family: 'Open Sans Condensed', sans-serif;
+
+}
+
+h1 {
+  position: absolute;
+  bottom: 45%;
+  left: 37%;
+  font-size: 3rem;
+  color: white;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.6);
+  font-size: 57px;
+}
+
+a {
+  text-decoration: none; /* Remove o sublinhado */
+  color: inherit; /* Mantém a cor do texto padrão */
+}
+
+.btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  line-height: 50px;
+  height: 50px;
+  text-align: center;
+  width: 250px;
+  cursor: pointer;
+  color: #FFF;
+  transition: all 0.3s;
+  position: relative;
+  top: 68px;
+  font-size: 30px;
+  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+.btn span {
+  transition: all 0.3s;
+}
+.btn::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  transition: all 0.3s;
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+  border-top-style: solid;
+  border-bottom-style: solid;
+  border-top-color: rgba(255,255,255,0.5);
+  border-bottom-color: rgba(255,255,255,0.5);
+  transform: scale(0.1, 1);
+}
+.btn:hover span {
+  letter-spacing: 2px;
+}
+.btn:hover::before {
+  opacity: 1; 
+  transform: scale(1, 1); 
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  transition: all 0.3s;
+  background-color: rgba(255,255,255,0.1);
+}
+.btn:hover::after {
+  opacity: 0; 
+  transform: scale(0.1, 1);
+}
+
+
+
+

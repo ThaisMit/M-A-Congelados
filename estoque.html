@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M&A | Estoque</title>
+    <link rel="stylesheet" href="estoque.css" />
+    <!-- Chamando o arquivo CSS -->
+  </head>
+  <body>
+    <a href="main.html" class="botao-voltar">Voltar</a>
+
+    <div class="container">
+      <h2>M&A Congelados | Estoque de Marmitas</h2>
+      <div class="lista" id="listaItens"></div>
+      <button onclick="abrirModal()">+</button>
+      <button class="botao-historico" onclick="abrirHistoricoVendas()">
+        Histórico de Vendas
+      </button>
+
+      <button class="botao-venda" onclick="abrirModalVenda()">
+        Registrar Venda
+      </button>
+    </div>
+
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <span onclick="fecharModal()" style="float: right; cursor: pointer"
+          >&times;</span
+        >
+        <h3>Adicionar Item</h3>
+        <form id="formItem">
+          <label>Nome do Item:</label>
+          <select id="nomeItem" onchange="verificarNovoItem()">
+            <option value="" disabled selected>Selecione um item</option>
+            <option value="novo">Novo Item</option>
+          </select>
+          <input
+            type="text"
+            id="novoNomeItem"
+            class="hidden"
+            placeholder="Digite o nome do novo prato"
+          />
+
+          <label>Quantidade:</label>
+          <input type="number" id="quantidadeItem" required />
+
+          <label>Valor:</label>
+          <select id="valorItem" onchange="verificarNovoValor()">
+            <option value="" disabled selected>Selecione uma opção</option>
+          </select>
+          <input
+            type="number"
+            id="novoValorItem"
+            class="hidden"
+            step="0.01"
+            placeholder="Digite o valor do prato"
+          />
+
+          <button type="submit">Adicionar</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="modalVenda" class="modal">
+      <div class="modal-content">
+        <span onclick="fecharModalVenda()" style="float: right; cursor: pointer"
+          >&times;</span
+        >
+        <h3>Registrar Venda</h3>
+
+        <label>Item:</label>
+        <select id="itemVendaSelect">
+          <option value="" disabled selected>Selecione um item</option>
+        </select>
+
+        <label>Quantidade:</label>
+        <input type="number" id="quantidadeVenda" min="1" />
+
+        <button onclick="adicionarItemVenda()">Adicionar</button>
+
+        <div class="lista-venda" id="listaVendaItens"></div>
+
+        <p id="totalVenda">Total: R$ 0.00</p>
+
+        <button onclick="finalizarVenda()">Finalizar Venda</button>
+        <button onclick="cancelarVenda()">Cancelar</button>
+      </div>
+    </div>
+
+    <div id="modalHistorico" class="modal">
+      <div class="modal-content">
+        <span onclick="fecharHistorico()" style="float: right; cursor: pointer"
+          >&times;</span
+        >
+        <h3>Histórico de Vendas</h3>
+
+        <label>Filtrar por data:</label>
+        <input type="date" id="filtroData" onchange="filtrarHistorico()" />
+
+        <div id="listaHistorico"></div>
+      </div>
+    </div>
+
+    <script>
+      let itens = JSON.parse(localStorage.getItem('itens')) || []
+
+      function carregarItens() {
+        itens = JSON.parse(localStorage.getItem('itens')) || []
+        const lista = document.getElementById('listaItens')
+        lista.innerHTML = ''
+
+        const selectNome = document.getElementById('nomeItem')
+        selectNome.innerHTML = '<option value="novo">Novo Item</option>'
+
+        itens.forEach((item, index) => {
+          if (item.quantidade > 0) {
+            const elemento = document.createElement('div')
+            elemento.classList.add('item-container')
+            elemento.innerHTML = `
+      <span class="item-text">${item.nome} - ${
+              item.quantidade
+            } unidades - R$ ${item.valor.toFixed(2)}
+        <button class="btn-excluir" onclick="excluirItem(${index})">-</button>
+      </span>
+    `
+            lista.appendChild(elemento)
+
+            let option = document.createElement('option')
+            option.value = item.nome
+            option.textContent = item.nome
+            selectNome.appendChild(option)
+          }
+        })
+
+        fecharModal()
+      }
+
+      let itensVenda = []
+
+      function abrirModalVenda() {
+        itens = JSON.parse(localStorage.getItem('itens')) || []
+        document.getElementById('modalVenda').style.display = 'block'
+        const select = document.getElementById('itemVendaSelect')
+        select.innerHTML = `<option value="" disabled selected>Selecione um item</option>`
+
+        itens.forEach(item => {
+          if (item.quantidade > 0) {
+            let option = document.createElement('option')
+            option.value = item.nome
+            option.textContent = item.nome
+            select.appendChild(option)
+          }
+        })
+
+        document.getElementById('quantidadeVenda').value = ''
+        itensVenda = []
+        atualizarListaVenda()
+      }
+
+      function fecharModalVenda() {
+        document.getElementById('modalVenda').style.display = 'none'
+      }
+
+      function adicionarItemVenda() {
+        const nome = document.getElementById('itemVendaSelect').value
+        const quantidade = parseInt(
+          document.getElementById('quantidadeVenda').value
+        )
+
+        const itemEstoque = itens.find(item => item.nome === nome)
+        if (!itemEstoque || quantidade > itemEstoque.quantidade) {
+          alert('Quantidade indisponível em estoque.')
+          return
+        }
+
+        const existente = itensVenda.find(item => item.nome === nome)
+        if (existente) {
+          if (existente.quantidade + quantidade > itemEstoque.quantidade) {
+            alert('Quantidade excede o estoque disponível.')
+            return
+          }
+          existente.quantidade += quantidade
+        } else {
+          itensVenda.push({ nome, quantidade, valor: itemEstoque.valor })
+        }
+
+        atualizarListaVenda()
+      }
+
+      function atualizarListaVenda() {
+        const lista = document.getElementById('listaVendaItens')
+        lista.innerHTML = ''
+        let total = 0
+        itensVenda.forEach(item => {
+          total += item.quantidade * item.valor
+          const div = document.createElement('div')
+          div.classList.add('lista-venda-item')
+          div.textContent = `${item.nome} - ${
+            item.quantidade
+          } x R$ ${item.valor.toFixed(2)}`
+          lista.appendChild(div)
+        })
+        document.getElementById(
+          'totalVenda'
+        ).textContent = `Total: R$ ${total.toFixed(2)}`
+      }
+
+      function finalizarVenda() {
+        if (itensVenda.length === 0) {
+          alert('Adicione pelo menos um item à venda antes de finalizar.')
+          return
+        }
+
+        itensVenda.forEach(vendaItem => {
+          const itemEstoque = itens.find(item => item.nome === vendaItem.nome)
+          itemEstoque.quantidade -= vendaItem.quantidade
+        })
+
+        const vendas = JSON.parse(localStorage.getItem('vendas')) || []
+        const novaVenda = {
+          data: new Date().toISOString().split('T')[0],
+          itens: itensVenda,
+          total: itensVenda.reduce(
+            (acc, item) => acc + item.quantidade * item.valor,
+            0
+          )
+        }
+        vendas.push(novaVenda)
+        localStorage.setItem('vendas', JSON.stringify(vendas))
+        localStorage.setItem('itens', JSON.stringify(itens))
+
+        fecharModalVenda()
+        carregarItens()
+        alert('Venda registrada com sucesso!')
+      }
+
+      function abrirHistoricoVendas() {
+        const dataHoje = new Date().toISOString().split('T')[0]
+        const inputData = document.getElementById('filtroData')
+        inputData.value = dataHoje
+
+        document.getElementById('modalHistorico').style.display = 'block'
+        filtrarHistorico()
+      }
+
+      function mostrarHistoricoVendas() {
+        const vendas = JSON.parse(localStorage.getItem('vendas')) || []
+        const filtroData = document.getElementById('filtroData').value
+        const lista = document.getElementById('listaHistorico')
+        lista.innerHTML = ''
+
+        const filtrado = filtroData
+          ? vendas.filter(v => v.data === filtroData)
+          : vendas
+
+        if (filtrado.length === 0) {
+          lista.innerHTML = '<p>Nenhuma venda encontrada.</p>'
+          return
+        }
+
+        filtrado.forEach((venda, index) => {
+          const item = document.createElement('div')
+          item.classList.add('historico-item')
+          item.innerHTML = `
+          <p><strong>Data:</strong> ${venda.data}</p>
+          <p><strong>Total:</strong> R$ ${venda.total.toFixed(2)}</p>
+          <button onclick="mostrarDetalhes(${index})">Detalhes</button>
+          <div id="detalhes-${index}" class="detalhes hidden"></div>
+        `
+          lista.appendChild(item)
+        })
+      }
+
+      function mostrarDetalhes(index) {
+        const vendas = JSON.parse(localStorage.getItem('vendas')) || []
+        const detalhesDiv = document.getElementById(`detalhes-${index}`)
+        const venda = vendas[index]
+
+        if (!detalhesDiv.classList.contains('hidden')) {
+          detalhesDiv.classList.add('hidden')
+          detalhesDiv.innerHTML = ''
+          return
+        }
+
+        detalhesDiv.classList.remove('hidden')
+        detalhesDiv.innerHTML = '<h4>Itens:</h4>'
+        venda.itens.forEach(item => {
+          const linha = document.createElement('p')
+          linha.textContent = `${item.nome} - ${
+            item.quantidade
+          } x R$ ${item.valor.toFixed(2)}`
+          detalhesDiv.appendChild(linha)
+        })
+      }
+
+      function fecharHistorico() {
+        document.getElementById('modalHistorico').style.display = 'none'
+      }
+
+      function filtrarHistorico() {
+        const dataSelecionada = document.getElementById('filtroData').value
+        const historico = JSON.parse(localStorage.getItem('vendas')) || []
+        const lista = document.getElementById('listaHistorico')
+        lista.innerHTML = ''
+
+        const filtradas = historico.filter(
+          venda => venda.data === dataSelecionada
+        )
+
+        if (filtradas.length === 0) {
+          lista.innerHTML = '<p>Nenhuma venda encontrada nesta data.</p>'
+          return
+        }
+
+        filtradas.forEach((venda, index) => {
+          const item = document.createElement('div')
+          item.classList.add('historico-item')
+          item.innerHTML = `
+      <p><strong>Total:</strong> R$ ${venda.total.toFixed(2)}</p>
+      <button onclick="mostrarDetalhesFiltradas(${index})">Detalhes</button>
+      <div id="detalhes-filtradas-${index}" class="detalhes hidden"></div>
+    `
+          lista.appendChild(item)
+        })
+
+        // Salvar as vendas filtradas para o botão de detalhes usar corretamente
+        window.vendasFiltradas = filtradas
+      }
+
+      function mostrarDetalhesFiltradas(index) {
+        const venda = window.vendasFiltradas[index]
+        const detalhesDiv = document.getElementById(
+          `detalhes-filtradas-${index}`
+        )
+
+        if (!detalhesDiv.classList.contains('hidden')) {
+          detalhesDiv.classList.add('hidden')
+          detalhesDiv.innerHTML = ''
+          return
+        }
+
+        detalhesDiv.classList.remove('hidden')
+        detalhesDiv.innerHTML = '<h4>Itens da Venda:</h4>'
+        venda.itens.forEach(item => {
+          const linha = document.createElement('p')
+          linha.textContent = `${item.nome} - ${
+            item.quantidade
+          } x R$ ${item.valor.toFixed(2)}`
+          detalhesDiv.appendChild(linha)
+        })
+      }
+
+      function cancelarVenda() {
+        fecharModalVenda()
+        itensVenda = []
+      }
+
+      function excluirItem(index) {
+        if (confirm('Tem certeza que deseja excluir este item?')) {
+          itens.splice(index, 1)
+          localStorage.setItem('itens', JSON.stringify(itens))
+          carregarItens()
+        }
+      }
+
+      function abrirModal() {
+        document.getElementById('formItem').reset()
+        document.getElementById('nomeItem').value = ''
+        document.getElementById('valorItem').value = ''
+        document.getElementById('novoNomeItem').classList.add('hidden')
+        document.getElementById('novoValorItem').classList.add('hidden')
+        document.getElementById('modal').style.display = 'block'
+      }
+
+      function fecharModal() {
+        document.getElementById('modal').style.display = 'none'
+      }
+
+      function verificarNovoItem() {
+        let selectNome = document.getElementById('nomeItem')
+        let inputNome = document.getElementById('novoNomeItem')
+        let selectValor = document.getElementById('valorItem')
+
+        inputNome.classList.toggle('hidden', selectNome.value !== 'novo')
+        selectValor.innerHTML = `<option value="" disabled selected>Selecione uma opção</option>`
+
+        if (selectNome.value !== 'novo') {
+          selectValor.innerHTML += `<option value="mantem">Manter Valor</option>`
+        }
+
+        selectValor.innerHTML += `<option value="novo">Novo Valor</option>`
+      }
+
+      function verificarNovoValor() {
+        let select = document.getElementById('valorItem')
+        let input = document.getElementById('novoValorItem')
+        input.classList.toggle('hidden', select.value !== 'novo')
+      }
+
+      document
+        .getElementById('formItem')
+        .addEventListener('submit', function (event) {
+          event.preventDefault()
+
+          let nome = document.getElementById('nomeItem').value
+          if (nome === 'novo') {
+            nome = document.getElementById('novoNomeItem').value
+          }
+
+          let quantidade = parseInt(
+            document.getElementById('quantidadeItem').value
+          )
+          let valor =
+            document.getElementById('valorItem').value === 'novo'
+              ? parseFloat(document.getElementById('novoValorItem').value)
+              : (itens.find(item => item.nome === nome) || {}).valor || 0
+
+          let itemExistente = itens.find(item => item.nome === nome)
+          if (itemExistente) {
+            itemExistente.quantidade += quantidade
+            if (document.getElementById('valorItem').value === 'novo') {
+              itemExistente.valor = valor
+            }
+          } else {
+            itens.push({ nome, quantidade, valor })
+          }
+
+          localStorage.setItem('itens', JSON.stringify(itens))
+          fecharModal()
+          carregarItens()
+        })
+
+      carregarItens()
+    </script>
+  </body>
+</html>
